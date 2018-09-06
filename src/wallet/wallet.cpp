@@ -515,10 +515,27 @@ void CWallet::SetBestChain(const CBlockLocator& loc)
 std::set<std::pair<libzcash::PaymentAddress, uint256>> CWallet::GetNullifiersForAddresses(const std::set<libzcash::PaymentAddress> & addresses)
 {
     std::set<std::pair<libzcash::PaymentAddress, uint256>> nullifierSet;
+    // Sapling ivk -> addr map
+    std::map<libzcash::SaplingIncomingViewingKey, libzcash::SaplingPaymentAddress> ivkMap;
+    for (const auto & addr : addresses) {
+      if (boost::get<libzcash::SaplingPaymentAddress>(&addr) != nullptr) {
+        auto saplingAddr = boost::get<libzcash::SaplingPaymentAddress>(addr);
+        libzcash::SaplingIncomingViewingKey ivk;
+        this->GetSaplingIncomingViewingKey(saplingAddr, ivk);
+        ivkMap.insert(std::make_pair(ivk, saplingAddr));
+      }
+    }
     for (const auto & txPair : mapWallet) {
+        // Sprout
         for (const auto & noteDataPair : txPair.second.mapSproutNoteData) {
             if (noteDataPair.second.nullifier && addresses.count(noteDataPair.second.address)) {
                 nullifierSet.insert(std::make_pair(noteDataPair.second.address, noteDataPair.second.nullifier.get()));
+            }
+        }
+        // Sapling
+        for (const auto & noteDataPair : txPair.second.mapSaplingNoteData) {
+            if (noteDataPair.second.nullifier && ivkMap.count(noteDataPair.second.ivk)) {
+                nullifierSet.insert(std::make_pair(ivkMap[noteDataPair.second.ivk], noteDataPair.second.nullifier.get()));
             }
         }
     }
