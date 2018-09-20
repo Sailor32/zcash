@@ -574,12 +574,10 @@ bool CWallet::IsNoteSaplingChange(const std::set<std::pair<libzcash::PaymentAddr
     // - Notes created by consolidation transactions (e.g. using
     //   z_mergetoaddress).
     // - Notes sent from one address to itself.
-    for (const JSDescription & jsd : mapWallet[op.hash].vjoinsplit) {
-        for (const uint256 & nullifier : jsd.nullifiers) {
-            if (nullifierSet.count(std::make_pair(address, nullifier))) {
-                return true;
-            }
-        }
+    for (const SpendDescription &spend : mapWallet[op.hash].vShieldedSpend) {
+      if (nullifierSet.count(std::make_pair(address, spend.nullifier))) {
+          return true;
+      }
     }
     return false;
 }
